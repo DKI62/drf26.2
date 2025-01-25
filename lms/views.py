@@ -123,22 +123,17 @@ class CourseViewSet(viewsets.ModelViewSet):
             self.permission_classes = [IsAuthenticated]
         return [permission() for permission in self.permission_classes]
 
-    def update(self, request, *args, **kwargs):
+    def perform_update(self, serializer):
         """
-        Метод обновления курса с вызовом асинхронной задачи для уведомлений.
+        Переопределение метода обновления курса.
         """
-        response = super().update(request, *args, **kwargs)
+        instance = serializer.save()  # Сохраняем изменения
+        subscribers = instance.subscribers.select_related('user')
+        subscriber_emails = list(subscribers.values_list('user__email', flat=True))
 
-        # Получаем курс и подписчиков
-        course = self.get_object()
-        subscribers = Subscription.objects.filter(course=course).select_related('user')
-        subscriber_emails = [sub.user.email for sub in subscribers]
-
-        # Запуск асинхронной задачи
         if subscriber_emails:
-            send_course_update_email.delay(course.id, subscriber_emails)
-
-        return response
+            # Запуск асинхронной задачи для отправки писем
+            send_course_update_email.delay(instance.id, subscriber_emails)
 
 
 class SubscriptionView(APIView):
