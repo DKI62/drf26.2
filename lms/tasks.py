@@ -9,5 +9,10 @@ def send_course_update_email(course_id, subscriber_emails):
     message = f"The course with ID {course_id} has been updated. Check it out!"
     from_email = settings.DEFAULT_FROM_EMAIL
 
+    # Убедимся, что subscriber_emails - это список
+    if isinstance(subscriber_emails, str):
+        subscriber_emails = [subscriber_emails]
+
     send_mail(subject, message, from_email, subscriber_emails)
+
     return f"Emails sent to {len(subscriber_emails)} subscribers."
